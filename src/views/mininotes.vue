@@ -17,7 +17,7 @@
         <div v-if="showForm" class="bg-blue-50 p-5 rounded-xl mb-6 shadow-inner space-y-4">
           <input v-model="note.title" type="text" placeholder="Judul Catatan"
             class="w-full px-4 py-2 border border-blue-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          <textarea v-model="note.content" rows="4" placeholder="Isi catatan..."
+          <textarea v-model="note.content"  @input="handleTyping" rows="4" placeholder="Isi catatan..."
             class="w-full px-4 py-2 border border-blue-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
           <button @click="saveNote"
             class="w-full bg-blue-600 hover:bg-blue-400 text-white py-2 rounded-xl font-semibold transition-all shadow-md">
@@ -48,6 +48,13 @@
           <p class="text-lg font-semibold text-gray-700">Belum ada catatan.</p>
           <p class="text-gray-500">Klik tombol di atas untuk menambahkan catatan baru.</p>
         </div>
+
+        <div class="text-sm text-gray-600 mt-2">
+        <p v-for="user in userStatuses" :key="user.name">
+          <span v-if="user.online">🟢 {{ user.name }} sedang online</span>
+          <span v-if="user.typing"> - sedang mengetik...</span>
+        </p>
+      </div>
       </div>
   
       <!-- Logout
@@ -72,16 +79,40 @@
     doc,
     onSnapshot
   } from "firebase/firestore"
-  import { db } from '../firebase/firebase'
+import { db, auth, realtimeDb } from '../firebase/firebase'
+import { ref as rtdbRef, set, onValue } from 'firebase/database'
   
+//Notes (Firestore)
   const notes = ref([])
   const note = ref({ title: '', content: '' })
   const editingId = ref(null)
   const showForm = ref(false)
-  
   const notesCollection = collection(db, "notes")
   
-  // Ambil data realtime
+  //Status (Realtime)
+  const typingTimeout = ref(null)
+  const userStatuses = ref([])
+  
+  const handleTyping = () => {
+  const typingRef = rtdbRef(realtimeDb, 'status/' + auth.currentUser.uid)
+  set(typingRef, {
+    online: true,
+    typing: true,
+    name: auth.currentUser.email
+  })
+
+    if (typingTimeout.value) clearTimeout(typingTimeout.value)
+
+    typingTimeout.value = setTimeout(() => {
+      set(typingRef, {
+        online: true,
+        typing: false,
+        name: auth.currentUser.email
+      })
+    }, 2000) // jika tidak mengetik selama 2 detik, dianggap berhenti
+  }
+
+  // Ambil data notes realtime dari Firestore
   onMounted(() => {
     onSnapshot(notesCollection, (snapshot) => {
       notes.value = snapshot.docs.map(doc => ({
@@ -89,8 +120,15 @@
         ...doc.data()
       }))
     })
+    
+    // Ambil status online/typing dari Realtime Database
+    const statusRef = rtdbRef(realtimeDb, 'status')
+    onValue(statusRef, (snapshot) => {
+      const data = snapshot.val()
+      userStatuses.value = data ? Object.values(data) : []
+    })
   })
-  
+    
   // Simpan catatan baru atau update
   const saveNote = async () => {
     if (!note.value.title || !note.value.content) {

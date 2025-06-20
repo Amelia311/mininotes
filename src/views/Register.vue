@@ -5,21 +5,6 @@
         Daftar Akun Baru
       </h2>
       <form @submit.prevent="handleRegister" class="space-y-5">
-        <!-- Nama -->
-        <div>
-          <label class="block mb-1 text-sm font-semibold text-gray-700">Nama</label>
-          <input
-            v-model="name"
-            type="text"
-            placeholder="Nama lengkap"
-            :class="[
-              'w-full px-4 py-2 rounded-xl focus:outline-none transition-all',
-              nameTouched && !name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'
-            ]"
-          />
-          <p v-if="nameTouched && !name" class="text-red-500 text-sm mt-1">Nama tidak boleh kosong.</p>
-        </div>
-
         <!-- Email -->
         <div>
           <label class="block mb-1 text-sm font-semibold text-gray-700">Email</label>
@@ -70,13 +55,12 @@
 
 <script setup>
 import { ref } from 'vue'
-import axios from 'axios'
 import { useRouter } from 'vue-router'
+import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { auth } from '../firebase/firebase'
 
-const name = ref('')
 const email = ref('')
 const password = ref('')
-const nameTouched = ref(false)
 const emailTouched = ref(false)
 const passwordTouched = ref(false)
 const loading = ref(false)
@@ -88,27 +72,20 @@ const isValidEmail = (val) => {
 }
 
 const handleRegister = async () => {
-  // Tandai semua field sebagai "sudah disentuh"
-  nameTouched.value = true
   emailTouched.value = true
   passwordTouched.value = true
 
-  // Validasi sederhana
-  if (!name.value || !isValidEmail(email.value) || password.value.length < 6) {
+  if (!isValidEmail(email.value) || password.value.length < 6) {
     return
   }
 
   loading.value = true
   try {
-    await axios.post('http://127.0.0.1:8000/api/register', {
-      name: name.value,
-      email: email.value,
-      password: password.value
-    })
+    await createUserWithEmailAndPassword(auth, email.value, password.value)
     alert('Registrasi berhasil! Silakan login.')
     router.push('/login')
   } catch (err) {
-    alert('Registrasi gagal. Coba lagi.')
+    alert('Registrasi gagal: ' + err.message)
   } finally {
     loading.value = false
   }

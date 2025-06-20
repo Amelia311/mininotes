@@ -1,15 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
-// import Login from '../views/Login.vue'
-// import Register from '../views/Register.vue'
+import Login from '../views/Login.vue'
+import Register from '../views/Register.vue'
 // import Dashboard from '../views/Dashboard.vue'
 import mininotes from '../views/mininotes.vue'
 
 
 
 const routes = [
-    { path: '/', redirect: '/mininotes' },
-    // { path: '/Login', component: Login },
-    // { path: '/Register', component: Register },
+    { path: '/', redirect: '/Login' },
+    { path: '/Login', component: Login },
+    { path: '/Register', component: Register },
     // { path: '/Dashboard', component: Dashboard },
     { path: '/mininotes', component: mininotes },
 ]
