@@ -66,7 +66,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth, realtimeDb } from '../firebase/firebase.js' 
@@ -96,7 +96,7 @@ const handleLogin = async () => {
   try {
     await signInWithEmailAndPassword(auth, email.value, password.value)
     alert('Login berhasil!')
-    router.push('/mininotes') 
+    router.push('/mininotes')
   } catch (err) {
     alert('Login gagal: ' + err.message)
   } finally {
@@ -104,11 +104,24 @@ const handleLogin = async () => {
   }
 }
 
-const userStatusRef = rtdbRef(realtimeDb, 'status/' + auth.currentUser.uid)
-await set(userStatusRef, { online: true, typing: false, name: auth.currentUser.email })
+// Cek jika sudah login sebelumnya dan set status online
+onMounted(async () => {
+  if (auth.currentUser) {
+    const userStatusRef = rtdbRef(realtimeDb, 'status/' + auth.currentUser.uid)
+    await set(userStatusRef, {
+      online: true,
+      typing: false,
+      name: auth.currentUser.email
+    })
 
-onDisconnect(userStatusRef).set({ online: false, typing: false })
+    onDisconnect(userStatusRef).set({
+      online: false,
+      typing: false
+    })
+  }
+})
 </script>
+
 
 <style scoped>
 @keyframes fade-in {
